@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liste des stagiaires</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 32px 20px; color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .top {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+      justify-content: space-between; margin-bottom: 24px; color: #fff;
+    }
+    .top h1 { margin: 0; font-size: 26px; }
+    .top .count { font-size: 14px; opacity: .9; }
+    .btn {
+      padding: 10px 18px; background: #fff; color: var(--primary); font-weight: 600;
+      border-radius: 10px; text-decoration: none; font-size: 14px;
+    }
+    .search {
+      width: 100%; padding: 13px 16px; font-size: 15px; border: 0; border-radius: 12px;
+      margin-bottom: 24px; outline: none; box-shadow: 0 8px 20px rgba(0,0,0,.15);
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+    .card {
+      background: #fff; border-radius: 18px; padding: 24px 18px; text-align: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,.2); transition: transform .2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card img {
+      width: 110px; height: 110px; border-radius: 50%; object-fit: cover;
+      border: 4px solid var(--primary); background: #e2e8f0;
+    }
+    .card h2 { margin: 14px 0 4px; font-size: 18px; }
+    .card .ville { color: var(--muted); font-size: 14px; }
+    .card .date { margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .state { text-align: center; color: #fff; font-size: 16px; padding: 40px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div>
+        <h1>🎓 Liste des stagiaires</h1>
+        <div class="count" id="count"></div>
+      </div>
+      <a class="btn" href="index.html">+ Nouvelle inscription</a>
+    </div>
+
+    <input type="search" class="search" id="search" placeholder="Rechercher par nom, prénom ou ville...">
+    <div id="state" class="state">Chargement...</div>
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const state = document.getElementById('state');
+    const count = document.getElementById('count');
+    const search = document.getElementById('search');
+    let stagiaires = [];
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str ?? '';
+      return div.innerHTML;
+    }
+
+    function render(list) {
+      grid.innerHTML = '';
+      count.textContent = list.length + ' stagiaire(s)';
+
+      if (list.length === 0) {
+        state.style.display = 'block';
+        state.textContent = 'Aucun stagiaire trouvé.';
+        return;
+      }
+      state.style.display = 'none';
+
+      grid.innerHTML = list.map(s => `
+        <article class="card">
+          <img src="${escapeHtml(s.photo)}" alt="Photo de ${escapeHtml(s.prenom)}" loading="lazy">
+          <h2>${escapeHtml(s.prenom)} ${escapeHtml(s.nom)}</h2>
+          <div class="ville">📍 ${escapeHtml(s.ville)}</div>
+          <div class="date">Inscrit le ${new Date(s.date_inscription).toLocaleDateString('fr-FR')}</div>
+        </article>
+      `).join('');
+    }
+
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      render(stagiaires.filter(s =>
+        (s.nom + ' ' + s.prenom + ' ' + s.ville).toLowerCase().includes(q)
+      ));
+    });
+
+    async function load() {
+      try {
+        const response = await fetch('/api/liste.php');
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.error);
+        stagiaires = data.data;
+        render(stagiaires);
+      } catch (error) {
+        state.style.display = 'block';
+        state.textContent = 'Erreur : impossible de charger la liste.';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
